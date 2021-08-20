@@ -8,7 +8,11 @@
 
 import csv
 import os
+import string
+import random
 from shutil import copyfile
+
+random.seed(87)
 
 # defaults
 DEFAULT_LABEL_FILE = '../data/class_labels_indices.csv'
@@ -43,16 +47,16 @@ def download(class_name, args):
         os.makedirs(dst_dir)
         print("dst_dir: " + dst_dir)
 
+    # TODO: ffmpeg to stereo -> "-ac 2"
     with open(new_csv) as dataset:
         reader = csv.reader(dataset)
-
         for row in reader:
-            # print command for debugging
-            print("ffmpeg -ss " + str(row[1]) + " -t 10 -i $(youtube-dl -f 'bestaudio' -g https://www.youtube.com/watch?v=" +
-                       str(row[0]) + ") -ar " + str(DEFAULT_FS) + " -- \"" + dst_dir + "/" + str(row[0]) + "_" + row[1] + ".wav\"")
-            os.system(("ffmpeg -ss " + str(row[1]) + " -t 10 -i $(youtube-dl -f 'bestaudio' -g https://www.youtube.com/watch?v=" +
-                       str(row[0]) + ") -ar " + str(DEFAULT_FS) + " -- \"" + dst_dir + "/" + str(row[0]) + "_" + row[1] + ".wav\""))
-
+            dummy_text = ''.join(random.choices(string.ascii_uppercase + string.digits, k=2))
+            command = f"ffmpeg -y -ss {row[1]} -t {int(row[2]) - int(row[1])} -i $(youtube-dl -f 'bestaudio' -g https://www.youtube.com/watch?v={row[0]}) -ar {DEFAULT_FS} -ac 2 -- \"{dst_dir}/{row[0]}_{row[1]}-{row[2]}-{dummy_text}.wav\""
+            print(command) # print command for debugging
+            exitcode = os.system(command)
+            # "exitcode == 2" means that the job was killed by user.
+            assert (exitcode == 0) | (exitcode == 256), f"The download job was killed. {exitcode}"
 
 def create_csv(class_name, args):
     """
